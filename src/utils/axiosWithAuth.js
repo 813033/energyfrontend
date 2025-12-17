@@ -1,4 +1,4 @@
-// src/utils/axiosWithAuth.js
+//取得身分小工具
 import axios from 'axios';
 import { BASE_URL } from '@/config';
 

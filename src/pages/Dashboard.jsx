@@ -1,14 +1,17 @@
-//首頁 作為快速導覽、快捷前往各頁面的捷徑、近期輸出之報表紀錄等等(暫時多為寫好以便呈現畫面的內容 無實際功能 )
-
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; 
+import axiosWithAuth from "../utils/axiosWithAuth";
+import { BASE_URL } from "../config";
 
 export default function Dashboard({
   onNavigate = () => {},
   onQuickAction = () => {},
-  recentReports = [],
   username = "",
   theme,
 }) {
+  const navigate = useNavigate();
+  const [recentReports, setRecentReports] = useState([]);
+
   const THEME_FALLBACK = {
     bg: { canvas: "#141A24", surface: "#343A46", tile: "rgba(255,255,255,.075)" },
     text: { primary: "#E6EBF2", secondary: "rgba(230,235,242,.86)" },
@@ -36,17 +39,12 @@ export default function Dashboard({
   .title{ font-size:1.15rem; color:var(--muted); margin:0 0 .6rem 0; }
 
   .hero{ grid-column:1 / -1; padding:1.8rem; display:flex; align-items:center; justify-content:center;
-         background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)); text-align:center; }
+          background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)); text-align:center; }
   .hello{ font-size:1.7rem; font-weight:800; letter-spacing:.3px; }
   .sub{ opacity:.9; font-size:1rem; color:var(--muted); }
 
-  .row{ grid-column:1 / -1; display:grid; grid-template-columns: repeat(12, 1fr); gap:1rem; }
   .col-12{ grid-column: span 12; }
-  .col-8{ grid-column: span 8; }
-  .col-4{ grid-column: span 4; }
-  @media (max-width:1100px){ .col-8,.col-4{ grid-column: span 12; } }
-
-  /* Action tiles – bigger, 2 x 2 */
+  
   .tiles{ display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:1.2rem; align-items:stretch; }
   @media (max-width:900px){ .tiles{ grid-template-columns: 1fr; } }
 
@@ -59,7 +57,7 @@ export default function Dashboard({
     cursor:pointer;
     transition:transform .08s ease, filter .12s ease;
     text-align:left;            
-    width:100%;                 /* 填滿格線 四格起點對齊 */
+    width:100%;                 
   }
   .tile:hover{ filter:brightness(1.07); transform:translateY(-1px); }
   .tile:active{ transform:translateY(0); }
@@ -68,7 +66,7 @@ export default function Dashboard({
   .tile .icon{
     width:56px; height:56px; display:grid; place-items:center;
     border-radius:14px; font-weight:900;
-    background:#60A5FA; color:#0F1922;   /* 統一一組色 */
+    background:#60A5FA; color:#0F1922;   
     flex:0 0 56px;
   }
 
@@ -76,7 +74,6 @@ export default function Dashboard({
   .tile .t{ font-weight:900; font-size:1.05rem; color:#E6EBF2; }
   .tile .d{ color:var(--muted); font-size:.98rem; }
 
-  /* Reports full width */
   .list{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:.6rem; }
   .item{ display:flex; justify-content:space-between; align-items:center; gap:.8rem; padding:.6rem .4rem; border-radius:.6rem; }
   .item:hover{ background:rgba(255,255,255,.04); }
@@ -87,9 +84,8 @@ export default function Dashboard({
 
   .section-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:.4rem; }
   .right-muted{ color:var(--muted); font-size:.95rem; }
-  /* 報表連結樣式 */
   .list a {
-    color: #60A5FA;              /* 淺藍和tile icon一致 */
+    color: #60A5FA;              
     text-decoration: none;
     font-weight: 600;
   }
@@ -99,30 +95,55 @@ export default function Dashboard({
   }
   `;
 
-  //簡單當前時間提醒
   const greeting = (() => {
     const h = new Date().getHours();
     if (h < 5) return "夜深了 注意休息"; if (h < 11) return "早安"; if (h < 14) return "午安"; if (h < 18) return "下午好"; return "晚安";
   })();
-  //預計做為過去輸出報表之紀錄呈現 但未完成 先以手動填資料暫放
-  const MANUAL_REPORTS = [
-  {
-    id: "manual-1",
-    name: "BESS-Report_2022-12-01_to_2023-04-30.pdf",
-    period: "2022-12-01 ~ 2023-04-30",
-  },
-  {
-    id: "manual-2",
-    name: "BESS-Report_2022-12-01_to_2023-04-29.pdf",
-    period: "2022-12-01 ~ 2023-04-29",
-  },
-];
 
-  const placeholderRows = Array.from({ length: 6 }, (_, i) => ({ id:`ph-${i}`, name:"—", period:"—" }));
-  const rows = [
-  ...MANUAL_REPORTS,
-  ...((recentReports && recentReports.length > 0) ? recentReports : placeholderRows),
-].slice(0, 5);
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const fetchHistory = async () => {
+    try {
+      const res = await axiosWithAuth().get('/api/report/history');
+      if (Array.isArray(res.data)) {
+        setRecentReports(res.data);
+      }
+    } catch (err) {
+      console.error("無法取得報表歷史", err);
+    }
+  };
+
+  const handleNav = (path) => {
+    navigate(path);
+  };
+
+  const handleReDownload = (report) => {
+    alert(`準備下載報表: ${report.name}`);
+    navigate("/data-analysis"); 
+  };
+
+  // =================================================================
+  // [修改重點] 讓版面永遠保持 5 行
+  // =================================================================
+  const MIN_ROWS = 6;
+  
+  // 計算需要補幾個空位
+  const emptyCount = Math.max(0, MIN_ROWS - recentReports.length);
+  
+  // 產生空位陣列
+  const placeholders = Array.from({ length: emptyCount }, (_, i) => ({
+    id: `ph-${i}`,
+    name: "—",
+    period: "—",
+    isPlaceholder: true // 標記為佔位符
+  }));
+
+  // 合併：真實資料 + 佔位符，並確保總數是 5 筆 (如果真實資料超過5筆就只顯示真實資料)
+  const displayRows = [...recentReports, ...placeholders].slice(0, Math.max(recentReports.length, MIN_ROWS));
+  // =================================================================
+
   return (
     <div className="wrap">
       <style>{css}</style>
@@ -141,28 +162,27 @@ export default function Dashboard({
             <div className="right-muted">常用任務鍵</div>
           </div>
           <div className="tiles">
-            <Tile icon="LIVE" title="即時監測" desc="查看即時趨勢與排程最新變化" onClick={()=>{ onQuickAction("live"); onNavigate("/live"); }} />
-            <Tile icon="HIS"  title="排程記錄" desc="查詢已執行排程與成本總結" onClick={()=>{ onQuickAction("schedule"); onNavigate("/schedule"); }} />
-            <Tile icon="ANL"  title="資料分析" desc="進入分析頁面，瀏覽圖表、趨勢" onClick={()=>{ onQuickAction("analysis"); onNavigate("/analysis"); }} />
-            <Tile icon="PDF"  title="產生報表" desc="下載區間 PDF 報表" onClick={()=>{ onQuickAction("report"); onNavigate("/reports"); }} />
+            <Tile icon="LIVE" title="即時監測" desc="查看即時趨勢與排程最新變化" onClick={()=>handleNav("/monitor")} />
+            <Tile icon="HIS"  title="排程記錄" desc="查詢已執行排程與成本總結" onClick={()=>handleNav("/schedule-result")} />
+            <Tile icon="ANL"  title="資料分析" desc="進入分析頁面，瀏覽圖表、趨勢" onClick={()=>handleNav("/data-analysis")} />
+            <Tile icon="PDF"  title="產生報表" desc="下載區間 PDF 報表" onClick={()=>handleNav("/data-analysis")} />
           </div>
         </section>
 
         <section className="card col-12">
           <div className="section-head">
             <div className="title">報表生成紀錄</div>
-            <div className="right-muted">最近下載的報表</div>
+            <div className="right-muted">本次登入下載紀錄</div>
           </div>
           <ul className="list">
-              {rows.map((r, i) => (
-                <li key={r.id} className="item">
+              {displayRows.map((r, i) => (
+                <li key={r.id || i} className="item">
                   <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
-                    {/*ID序號 從1開始往下遞增 */}
                     <span style={{ color: "var(--muted)", fontWeight: 700, minWidth: "2rem" }}>
                       #{i + 1}
                     </span>
 
-                    {/* 報表連結 */}
+                    {/* 如果是佔位符，顯示橫線；如果是資料，顯示可點擊連結 */}
                     {r.name === "—" ? (
                       <span className="muted">—</span>
                     ) : (
@@ -170,7 +190,7 @@ export default function Dashboard({
                         href="#"
                         onClick={(e) => {
                           e.preventDefault();
-                          onNavigate(`/reports/${r.id}`);
+                          handleReDownload(r);
                         }}
                       >
                         {r.name}
@@ -184,15 +204,14 @@ export default function Dashboard({
                   <div style={{ display: "flex", gap: ".4rem" }}>
                     <button
                       className={`btn ${r.name === "—" ? "disabled" : ""}`}
-                      onClick={() => onNavigate(`/reports/${r.id}`)}
+                      onClick={() => r.name !== "—" && handleReDownload(r)}
                     >
-                      查看
+                      下載
                     </button>
                   </div>
                 </li>
               ))}
             </ul>
-
         </section>
       </div>
     </div>

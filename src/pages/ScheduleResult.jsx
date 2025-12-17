@@ -236,11 +236,21 @@ async function fetchPredictionAndAlign(dateStr, chartLabels) {
   const chartData = {
     labels,
     datasets: [
-      { label: 'Grid Power (kW)', data: sortedData.map(d => d.grid), borderColor: "rgba(255, 255, 255, 1)", borderWidth: 2},
+      { label: 'Grid Power (kW)', data: sortedData.map(d => d.grid), borderColor: "aqua", borderWidth: 2},
       { label: 'Charge (kW)', data: sortedData.map(d => d.charge), borderColor: "rgba(36,255,18,1)", borderWidth: 2 },
       { label: 'Discharge (kW)', data: sortedData.map(d => d.discharge), borderColor: 'red', borderWidth: 2 },
       { label: 'SOC (%)', data: sortedData.map(d => d.soc), borderColor: 'orange', yAxisID: 'y1', borderWidth: 2 },
       { label: 'Load_actual (kW)', data: sortedData.map(d => d.load), borderColor: "#9c27b0", borderWidth: 2 },
+      {
+        label: "Contract Limit",
+        data: sortedData.map(() => 1175),
+        borderColor: "rgba(255,255,255,0.85)",
+        borderDash: [6, 6],
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false,
+        yAxisID: "y",
+      },
       {
       label: 'Load_prediction (kW)',
       data: predAligned,

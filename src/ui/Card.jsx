@@ -1,4 +1,4 @@
-//常用字卡之小元件
+//常用方塊卡之小元件
 import React from 'react';
 import { THEME } from './theme';
 export const Card = ({ title, subtitle, right, children, style }) => (
