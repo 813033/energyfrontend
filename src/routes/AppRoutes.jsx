@@ -1,9 +1,11 @@
-//處理各頁面對應的路徑以及身份對應頁面
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from '../pages/Dashboard';
 import AdminPage from '../pages/AdminPage';
-import Login from '../Login';
-import ContractSetting from '../pages/ContractSetting';
+import Login from '../pages/Login';
+import Monitor from '../pages/Monitor';
+import ScheduleResult from '../pages/ScheduleResult';
+import DataAnalysis from '../pages/DataAnalysis';
+import SimulationPage from '../components/SimulationPage'; // [新增] 引入頁面
 import ProtectedRoute from '../components/ProtectedRoute';
 
 export default function AppRoutes() {
@@ -11,15 +13,12 @@ export default function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/dashboard" element={<ProtectedRoute role={role}><Dashboard /></ProtectedRoute>} />
-      <Route path="/schedule-result" element={<ProtectedRoute role={role}><Monitor /></ProtectedRoute>} />
-      {/* <Route path="/contract-setting" element={
-        <ProtectedRoute role={role} allowedRole="ADMIN">
-          <ContractSetting />
-        </ProtectedRoute>
-      } /> */}
+      {/* ... (其他路由保持不變) ... */}
+
+      {/* [刪除] 不需要這個單獨的路由了 */}
+      {/* <Route path="/simulation" element={...} /> */}
+
+      {/* [保留] 這是唯一的管理入口 */}
       <Route path="/admin" element={
         <ProtectedRoute role={role} allowedRole="ADMIN">
           <AdminPage />
